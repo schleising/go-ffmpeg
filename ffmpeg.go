@@ -194,7 +194,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 }
 
 // String method for the Progress struct
-func (p *Progress) String() string {
+func (p Progress) String() string {
 	return strconv.FormatFloat(p.PercentComplete, 'f', 2, 64) + "% Complete - " + "Time Remaining: " + p.TimeRemaining.Truncate(time.Second).String() + " - Estimated Finish Time: " + p.EstimatedFinishTime.Format(time.TimeOnly)
 }
 
@@ -215,7 +215,7 @@ type Ffmpeg struct {
 	startTime time.Time
 
 	// Progress channel
-	Progress chan *Progress
+	Progress chan Progress
 }
 
 func NewFfmpeg(inputFile string, outputFile string, command []string) (*Ffmpeg, error) {
@@ -249,7 +249,7 @@ func NewFfmpeg(inputFile string, outputFile string, command []string) (*Ffmpeg, 
 	cmd := exec.Command("ffmpeg", options...)
 
 	// Create a channel to send the progress
-	progressChannel := make(chan *Progress)
+	progressChannel := make(chan Progress)
 
 	// Get the input fiel details with ffprobe
 	ffprobe := exec.Command(
@@ -348,7 +348,7 @@ func (f *Ffmpeg) Start() error {
 			}
 
 			// Send the progress to the channel
-			f.Progress <- progress
+			f.Progress <- *progress
 		}
 	}()
 
