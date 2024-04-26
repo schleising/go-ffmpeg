@@ -207,10 +207,16 @@ func (f *Ffmpeg) Start() error {
 				if !errors.Is(err, ErrNoProgressInformation) {
 					// Send an error to the error channel
 					f.Error <- err
-				}
 
-				// Continue to the next iteration
-				continue
+					// Cancel the ffmpeg command
+					f.command.Cancel()
+
+					// Clean up
+					f.cleanUp()
+				} else {
+					// Continue to the next iteration
+					continue
+				}
 			}
 
 			// Send the progress to the channel
