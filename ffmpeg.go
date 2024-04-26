@@ -376,7 +376,7 @@ func (f *Ffmpeg) Start() error {
 	go func() {
 		// Read the output
 		for {
-			// Check if the context has been cancelled
+			// Read the line
 			line, err := stdErrScanner.ReadString('\r')
 			if err != nil {
 				// Cancel the ffmpeg command
