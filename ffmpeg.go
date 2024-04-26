@@ -395,7 +395,7 @@ func (f *Ffmpeg) Start() error {
 				// Continue to the next iteration
 				continue
 			}
-	
+
 			// Send the progress to the channel
 			f.Progress <- *progress
 		}
