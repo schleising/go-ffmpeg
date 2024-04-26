@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -203,7 +204,7 @@ func (f *Ffmpeg) Start() error {
 			progress, err := newProgress(line, f.duration, f.startTime, f.inputFile, f.outputFile)
 			if err != nil {
 				// Do not send an error if the progress information is not available
-				if err != ErrNoProgressInformation {
+				if !errors.Is(err, ErrNoProgressInformation) {
 					// Send an error to the error channel
 					f.Error <- err
 				}
