@@ -10,10 +10,10 @@ import (
 // Progress struct to parse and store the progress of the ffmpeg command
 type Progress struct {
 	// The input file
-	InputFile string `json:"input_file"`
+	InputFile string `json:"inputFile"`
 
 	// The output file
-	OutputFile string `json:"output_file"`
+	OutputFile string `json:"outputFile"`
 
 	// Frame number
 	Frame int `json:"frame"`
@@ -43,13 +43,13 @@ type Progress struct {
 	Speed float64 `json:"speed"`
 
 	// Percent complete
-	PercentComplete float64 `json:"percent_complete"`
+	PercentComplete float64 `json:"percentComplete"`
 
 	// Time remaining
-	TimeRemaining time.Duration `json:"time_remaining"`
+	TimeRemaining time.Duration `json:"timeRemaining"`
 
 	// Estimated finish time
-	EstimatedFinishTime time.Time `json:"estimated_finish_time"`
+	EstimatedFinishTime time.Time `json:"estimatedFinishTime"`
 }
 
 // Indices of the progress fields
