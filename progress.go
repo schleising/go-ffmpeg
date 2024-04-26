@@ -1,7 +1,6 @@
 package go_ffmpeg
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +69,7 @@ const (
 func newProgress(line string, duration time.Duration, startTime time.Time, inputFile string, outputFile string) (*Progress, error) {
 	// Check if the line contains progress information
 	if !strings.HasPrefix(line, "frame=") {
-		return nil, errors.New("line does not contain progress information")
+		return nil, ErrNoProgressInformation
 	}
 
 	// Fields function to split the line
@@ -83,53 +82,53 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Check if the line contains the correct number of fields
 	if len(fields) != 18 {
-		return nil, errors.New("line does not contain the correct number of fields")
+		return nil, ErrWrongNumberOfFields
 	}
 
 	// Parse the frame number
 	frame, err := strconv.Atoi(fields[FrameIndex])
 	if err != nil {
-		return nil, err
+		return nil, ErrFrameNumber
 	}
 
 	// Parse the FPS
 	fps, err := strconv.ParseFloat(fields[FPSIndex], 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrFPS
 	}
 
 	// Parse the Q value
 	q, err := strconv.ParseFloat(fields[QIndex], 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrQ
 	}
 
 	// Parse the size
 	size, err := strconv.ParseFloat(strings.TrimRight(fields[SizeIndex], "KiB"), 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrSize
 	}
 
 	// Parse the time
 	splitTime := strings.Split(fields[TimeIndex], ":")
 	if len(splitTime) != 3 {
-		return nil, errors.New("time does not contain hours, minutes, and seconds")
+		return nil, ErrTime
 	}
 
 	// Get the hours, minutes, and seconds
 	hours, err := strconv.Atoi(splitTime[0])
 	if err != nil {
-		return nil, err
+		return nil, ErrTime
 	}
 
 	minutes, err := strconv.Atoi(splitTime[1])
 	if err != nil {
-		return nil, err
+		return nil, ErrTime
 	}
 
 	seconds, err := strconv.ParseFloat(splitTime[2], 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrTime
 	}
 
 	// Calculate the time through the file
@@ -138,25 +137,25 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 	// Parse the bitrate
 	bitrate, err := strconv.ParseFloat(strings.TrimRight(fields[BitrateIndex], "kbit/s"), 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrBitrate
 	}
 
 	// Parse the dupliate frame count
 	dup, err := strconv.Atoi(fields[DupIndex])
 	if err != nil {
-		return nil, err
+		return nil, ErrDup
 	}
 
 	// Parse the dropped frame count
 	drop, err := strconv.Atoi(fields[DropIndex])
 	if err != nil {
-		return nil, err
+		return nil, ErrDrop
 	}
 
 	// Parse the speed
 	speed, err := strconv.ParseFloat(strings.TrimRight(fields[SpeedIndex], "x"), 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrSpeed
 	}
 
 	// Calculate the percent complete

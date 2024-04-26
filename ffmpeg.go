@@ -92,7 +92,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, outputFile strin
 	// Get the output pipe
 	ffprobeOutput, err := ffprobe.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return nil, ErrFfProbeStdOutPipe
 	}
 
 	// Defer closing the output pipe
@@ -101,7 +101,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, outputFile strin
 	// Start the ffprobe command
 	err = ffprobe.Start()
 	if err != nil {
-		return nil, err
+		return nil, ErrFfProbeCommand
 	}
 
 	// Create a scanner to read the output
@@ -126,7 +126,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, outputFile strin
 	// Convert the duration string to a float64
 	durationSeconds, err := strconv.ParseFloat(durationString, 64)
 	if err != nil {
-		return nil, err
+		return nil, ErrFfProbeDuration
 	}
 
 	// Convert the duration to a time.Duration
@@ -176,7 +176,7 @@ func (f *Ffmpeg) Start() error {
 
 	// Check for errors
 	if err != nil {
-		return err
+		return ErrStdErrPipe
 	}
 
 	// Defer closing the stderr pipe
@@ -202,8 +202,11 @@ func (f *Ffmpeg) Start() error {
 			// Log the output
 			progress, err := newProgress(line, f.duration, f.startTime, f.inputFile, f.outputFile)
 			if err != nil {
-				// Send an error to the error channel
-				f.Error <- err
+				// Do not send an error if the progress information is not available
+				if err != ErrNoProgressInformation {
+					// Send an error to the error channel
+					f.Error <- err
+				}
 
 				// Continue to the next iteration
 				continue
