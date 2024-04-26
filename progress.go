@@ -10,46 +10,46 @@ import (
 // Progress struct to parse and store the progress of the ffmpeg command
 type Progress struct {
 	// The input file
-	InputFile string
+	InputFile string `json:"input_file"`
 
 	// The output file
-	OutputFile string
+	OutputFile string `json:"output_file"`
 
 	// Frame number
-	Frame int
+	Frame int `json:"frame"`
 
 	// Frames per second
-	FPS float64
+	FPS float64 `json:"fps"`
 
 	// Q value
-	Q float64
+	Q float64 `json:"q"`
 
 	// Size of the output file
-	Size float64
+	Size float64 `json:"size"`
 
 	// Time through the file
-	Time time.Duration
+	Time time.Duration `json:"time"`
 
 	// Bitrate
-	Bitrate float64
+	Bitrate float64 `json:"bitrate"`
 
 	// Duplicate frame count
-	Dup int
+	Dup int `json:"dup"`
 
 	// Dropped frame count
-	Drop int
+	Drop int `json:"drop"`
 
 	// Conversion speed
-	Speed float64
+	Speed float64 `json:"speed"`
 
 	// Percent complete
-	PercentComplete float64
+	PercentComplete float64 `json:"percent_complete"`
 
 	// Time remaining
-	TimeRemaining time.Duration
+	TimeRemaining time.Duration `json:"time_remaining"`
 
 	// Estimated finish time
-	EstimatedFinishTime time.Time
+	EstimatedFinishTime time.Time `json:"estimated_finish_time"`
 }
 
 // Indices of the progress fields
