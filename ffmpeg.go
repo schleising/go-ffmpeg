@@ -216,6 +216,9 @@ func (f *Ffmpeg) Start() error {
 
 					// Clean up
 					f.cleanUp()
+
+					// Return
+					return
 				} else {
 					// Continue to the next iteration
 					continue
