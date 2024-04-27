@@ -42,12 +42,15 @@ type Ffmpeg struct {
 	context context.Context
 }
 
-func NewFfmpeg(cancelContext context.Context, inputFile string, outputFile string, command []string) (*Ffmpeg, error) {
+func NewFfmpeg(cancelContext context.Context, inputFile string, command []string) (*Ffmpeg, error) {
 	// Check if the input file exists
 	_, err := os.Stat(inputFile)
 	if os.IsNotExist(err) {
 		return nil, err
 	}
+
+	// Set the output file to the Converted subdirectory of the directory the input file is in with the same name as the input file
+	outputFile := filepath.Join(filepath.Dir(inputFile), "Converted", filepath.Base(inputFile))
 
 	// Create the output directory if it does not exist
 	outputDirectory := filepath.Dir(outputFile)
