@@ -33,12 +33,6 @@ type Progress struct {
 	// Bitrate
 	Bitrate float64 `json:"bitrate"`
 
-	// Duplicate frame count
-	Dup int `json:"dup"`
-
-	// Dropped frame count
-	Drop int `json:"drop"`
-
 	// Conversion speed
 	Speed float64 `json:"speed"`
 
@@ -52,21 +46,21 @@ type Progress struct {
 	EstimatedFinishTime time.Time `json:"estimatedFinishTime"`
 }
 
-// Indices of the progress fields
-const (
-	FrameIndex   = 1
-	FPSIndex     = 3
-	QIndex       = 5
-	SizeIndex    = 7
-	TimeIndex    = 9
-	BitrateIndex = 11
-	DupIndex     = 13
-	DropIndex    = 15
-	SpeedIndex   = 17
-)
-
 // Parse the progress information from the ffmpeg stderr output
 func newProgress(line string, duration time.Duration, startTime time.Time, inputFile string, outputFile string) (*Progress, error) {
+	// Declare the indexes for the fields
+	var frameIndex, fpsIndex, qIndex, sizeIndex, timeIndex, bitrateIndex, speedIndex int
+
+	// Declare the fields
+	var frame int
+	var fps, q, size, bitrate, speed float64
+	var timeThroughFile time.Duration
+	var hours, minutes int
+	var seconds float64
+
+	// Declare the error
+	var err error
+
 	// Check if the line contains progress information
 	if !strings.HasPrefix(line, "frame=") {
 		return nil, ErrNoProgressInformation
@@ -80,89 +74,129 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 	// Split the line
 	fields := strings.FieldsFunc(line, fieldsFunc)
 
-	// Check if the line contains the correct number of fields
-	if len(fields) != 18 {
-		return nil, ErrWrongNumberOfFields
+	// Loop through the fields extracting the values
+	for i, field := range fields {
+		fields[i] = strings.TrimSpace(field)
+
+		switch fields[i] {
+		case "frame":
+			frameIndex = i + 1
+		case "fps":
+			fpsIndex = i + 1
+		case "q":
+			qIndex = i + 1
+		case "size":
+			sizeIndex = i + 1
+		case "time":
+			timeIndex = i + 1
+		case "bitrate":
+			bitrateIndex = i + 1
+		case "speed":
+			speedIndex = i + 1
+		}
 	}
 
 	// Parse the frame number
-	frame, err := strconv.Atoi(fields[FrameIndex])
-	if err != nil {
+	if frameIndex != 0 && frameIndex < len(fields) {
+		frame, err = strconv.Atoi(fields[frameIndex])
+		if err != nil {
+			return nil, ErrFrameNumber
+		}
+	} else {
 		return nil, ErrFrameNumber
 	}
 
 	// Parse the FPS
-	fps, err := strconv.ParseFloat(fields[FPSIndex], 64)
-	if err != nil {
+	if fpsIndex != 0 && fpsIndex < len(fields) {
+		fps, err = strconv.ParseFloat(fields[fpsIndex], 64)
+		if err != nil {
+			return nil, ErrFPS
+		}
+	} else {
 		return nil, ErrFPS
 	}
 
 	// Parse the Q value
-	q, err := strconv.ParseFloat(fields[QIndex], 64)
-	if err != nil {
+	if qIndex != 0 && qIndex < len(fields) {
+		q, err = strconv.ParseFloat(fields[qIndex], 64)
+		if err != nil {
+			return nil, ErrQ
+		}
+	} else {
 		return nil, ErrQ
 	}
 
 	// Parse the size
-	size, err := strconv.ParseFloat(strings.TrimRight(fields[SizeIndex], "KiB"), 64)
-	if err != nil {
+	if sizeIndex != 0 && sizeIndex < len(fields) {
+		size, err = strconv.ParseFloat(strings.TrimRight(fields[sizeIndex], "KiB"), 64)
+		if err != nil {
+			return nil, ErrSize
+		}
+	} else {
 		return nil, ErrSize
 	}
 
 	// Parse the time
-	splitTime := strings.Split(fields[TimeIndex], ":")
-	if len(splitTime) != 3 {
+	if timeIndex != 0 && timeIndex < len(fields) {
+		splitTime := strings.Split(fields[timeIndex], ":")
+
+		if len(splitTime) != 3 {
+			return nil, ErrTime
+		}
+		// Get the hours, minutes, and seconds
+		hours, err = strconv.Atoi(splitTime[0])
+		if err != nil {
+			return nil, ErrTime
+		}
+	
+		minutes, err = strconv.Atoi(splitTime[1])
+		if err != nil {
+			return nil, ErrTime
+		}
+	
+		seconds, err = strconv.ParseFloat(splitTime[2], 64)
+		if err != nil {
+			return nil, ErrTime
+		}
+
+		// Calculate the time through the file
+		timeThroughFile = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+	} else {
 		return nil, ErrTime
 	}
-
-	// Get the hours, minutes, and seconds
-	hours, err := strconv.Atoi(splitTime[0])
-	if err != nil {
-		return nil, ErrTime
-	}
-
-	minutes, err := strconv.Atoi(splitTime[1])
-	if err != nil {
-		return nil, ErrTime
-	}
-
-	seconds, err := strconv.ParseFloat(splitTime[2], 64)
-	if err != nil {
-		return nil, ErrTime
-	}
-
-	// Calculate the time through the file
-	timeThroughFile := time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
 
 	// Parse the bitrate
-	bitrate, err := strconv.ParseFloat(strings.TrimRight(fields[BitrateIndex], "kbit/s"), 64)
-	if err != nil {
+	if bitrateIndex != 0 && bitrateIndex < len(fields) {
+		bitrate, err = strconv.ParseFloat(strings.TrimRight(fields[bitrateIndex], "kbit/s"), 64)
+		if err != nil {
+			return nil, ErrBitrate
+		}
+	} else {
 		return nil, ErrBitrate
 	}
 
-	// Parse the dupliate frame count
-	dup, err := strconv.Atoi(fields[DupIndex])
-	if err != nil {
-		return nil, ErrDup
-	}
-
-	// Parse the dropped frame count
-	drop, err := strconv.Atoi(fields[DropIndex])
-	if err != nil {
-		return nil, ErrDrop
-	}
-
 	// Parse the speed
-	speed, err := strconv.ParseFloat(strings.TrimRight(fields[SpeedIndex], "x"), 64)
-	if err != nil {
+	if speedIndex != 0 && speedIndex < len(fields) {
+		speed, err = strconv.ParseFloat(strings.TrimRight(fields[speedIndex], "x"), 64)
+		if err != nil {
+			return nil, ErrSpeed
+		}
+	} else {
 		return nil, ErrSpeed
 	}
 
 	// Calculate the percent complete
 	percentComplete := float64(timeThroughFile) / float64(duration) * 100
 
-	// Calculate the time taken and time remaining
+	// Calculate the time taken
 	timeTaken := time.Since(startTime)
+
+	// Prevent division by zero
+	if percentComplete == 0 {
+		percentComplete = 0.01
+	}
+
+	// Calculate the time remaining
 	timeRemaining := time.Duration(float64(timeTaken) / percentComplete * (100 - percentComplete))
 
 	// Calculate the estimated finish time
@@ -178,8 +212,6 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 		Size:                size,
 		Time:                timeThroughFile,
 		Bitrate:             bitrate,
-		Dup:                 dup,
-		Drop:                drop,
 		Speed:               speed,
 		PercentComplete:     percentComplete,
 		TimeRemaining:       timeRemaining,
