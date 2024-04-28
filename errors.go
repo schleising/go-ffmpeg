@@ -19,6 +19,7 @@ var (
 
 // Errors that can be returned by the ffmpeg command
 var (
+	ErrOutputFileExists  = errors.New("output file already exists")
 	ErrFfProbeStdOutPipe = errors.New("could not create ffprobe stdout pipe")
 	ErrStdErrPipe        = errors.New("could not create stderr pipe")
 	ErrFfProbeCommand    = errors.New("could not create ffprobe command")

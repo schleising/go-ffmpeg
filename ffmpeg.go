@@ -52,6 +52,12 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	// Set the output file to the Converted subdirectory of the directory the input file is in with the same name as the input file
 	outputFile := filepath.Join(filepath.Dir(inputFile), "Converted", filepath.Base(inputFile))
 
+	// If the output file already exists, return an error
+	_, err = os.Stat(outputFile)
+	if !os.IsNotExist(err) {
+		return nil, ErrOutputFileExists
+	}
+
 	// Create the output directory if it does not exist
 	outputDirectory := filepath.Dir(outputFile)
 	err = os.MkdirAll(outputDirectory, os.ModePerm)
