@@ -42,14 +42,14 @@ type Ffmpeg struct {
 	context context.Context
 }
 
-type duration struct {
+type format struct {
 	// The duration of the input file
 	Duration string `json:"duration"`
 }
 
 type ffProbeOutput struct {
 	// The format of the input file
-	Format duration `json:"format"`
+	Format format `json:"format"`
 }
 
 func NewFfmpeg(cancelContext context.Context, inputFile string, command []string) (*Ffmpeg, error) {
