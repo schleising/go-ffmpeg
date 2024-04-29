@@ -24,4 +24,5 @@ var (
 	ErrStdErrPipe        = errors.New("could not create stderr pipe")
 	ErrFfProbeCommand    = errors.New("could not create ffprobe command")
 	ErrFfProbeDuration   = errors.New("could not get duration from ffprobe")
+	ErrFfProbeUnmarshal  = errors.New("could not unmarshal ffprobe output")
 )

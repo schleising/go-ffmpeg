@@ -42,6 +42,16 @@ type Ffmpeg struct {
 	context context.Context
 }
 
+type duration struct {
+	// The duration of the input file
+	Duration string `json:"duration"`
+}
+
+type ffProbeOutput struct {
+	// The format of the input file
+	Format duration `json:"format"`
+}
+
 func NewFfmpeg(cancelContext context.Context, inputFile string, command []string) (*Ffmpeg, error) {
 	// Check if the input file exists
 	_, err := os.Stat(inputFile)
@@ -124,17 +134,14 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	}
 
 	// Unmarshal the output
-	var ffprobeOutputMap map[string]interface{}
-	err = json.Unmarshal([]byte(outputString), &ffprobeOutputMap)
+	var output ffProbeOutput
+	err = json.Unmarshal([]byte(outputString), &output)
 	if err != nil {
-		return nil, err
+		return nil, ErrFfProbeUnmarshal
 	}
 
-	// Get the duration of the input file
-	durationString := ffprobeOutputMap["format"].(map[string]interface{})["duration"].(string)
-
 	// Convert the duration string to a float64
-	durationSeconds, err := strconv.ParseFloat(durationString, 64)
+	durationSeconds, err := strconv.ParseFloat(output.Format.Duration, 64)
 	if err != nil {
 		return nil, ErrFfProbeDuration
 	}
