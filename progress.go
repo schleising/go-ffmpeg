@@ -148,12 +148,12 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 		if err != nil {
 			return nil, ErrTime
 		}
-	
+
 		minutes, err = strconv.Atoi(splitTime[1])
 		if err != nil {
 			return nil, ErrTime
 		}
-	
+
 		seconds, err = strconv.ParseFloat(splitTime[2], 64)
 		if err != nil {
 			return nil, ErrTime
