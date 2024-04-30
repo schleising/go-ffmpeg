@@ -70,8 +70,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 
 	// Create the output directory if it does not exist
 	outputDirectory := filepath.Dir(outputFile)
-	err = os.MkdirAll(outputDirectory, os.ModePerm)
-	if err != nil {
+	if err = os.MkdirAll(outputDirectory, os.ModePerm); err != nil {
 		return nil, err
 	}
 
@@ -119,8 +118,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	defer ffprobeOutput.Close()
 
 	// Start the ffprobe command
-	err = ffprobe.Start()
-	if err != nil {
+	if err = ffprobe.Start(); err != nil {
 		return nil, ErrFfProbeCommand
 	}
 
@@ -135,8 +133,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 
 	// Unmarshal the output
 	var output ffProbeOutput
-	err = json.Unmarshal([]byte(outputString), &output)
-	if err != nil {
+	if err = json.Unmarshal([]byte(outputString), &output); err != nil {
 		return nil, ErrFfProbeUnmarshal
 	}
 
@@ -190,8 +187,6 @@ func (f *Ffmpeg) cleanUp() {
 func (f *Ffmpeg) Start() error {
 	// Create a reader to read the output from stderr
 	stderr, err := f.command.StderrPipe()
-
-	// Check for errors
 	if err != nil {
 		return ErrStdErrPipe
 	}
@@ -244,8 +239,7 @@ func (f *Ffmpeg) Start() error {
 	}()
 
 	// Run the command
-	err = f.command.Run()
-	if err != nil {
+	if err = f.command.Run(); err != nil {
 		return err
 	}
 

@@ -98,8 +98,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the frame number
 	if frameIndex != 0 && frameIndex < len(fields) {
-		frame, err = strconv.Atoi(fields[frameIndex])
-		if err != nil {
+		if frame, err = strconv.Atoi(fields[frameIndex]); err != nil {
 			return nil, ErrFrameNumber
 		}
 	} else {
@@ -108,8 +107,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the FPS
 	if fpsIndex != 0 && fpsIndex < len(fields) {
-		fps, err = strconv.ParseFloat(fields[fpsIndex], 64)
-		if err != nil {
+		if fps, err = strconv.ParseFloat(fields[fpsIndex], 64); err != nil {
 			return nil, ErrFPS
 		}
 	} else {
@@ -118,8 +116,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the Q value
 	if qIndex != 0 && qIndex < len(fields) {
-		q, err = strconv.ParseFloat(fields[qIndex], 64)
-		if err != nil {
+		if q, err = strconv.ParseFloat(fields[qIndex], 64); err != nil {
 			return nil, ErrQ
 		}
 	} else {
@@ -128,8 +125,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the size
 	if sizeIndex != 0 && sizeIndex < len(fields) {
-		size, err = strconv.ParseFloat(strings.TrimRight(fields[sizeIndex], "KiB"), 64)
-		if err != nil {
+		if size, err = strconv.ParseFloat(strings.TrimRight(fields[sizeIndex], "KiB"), 64); err != nil {
 			return nil, ErrSize
 		}
 	} else {
@@ -144,18 +140,15 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 			return nil, ErrTime
 		}
 		// Get the hours, minutes, and seconds
-		hours, err = strconv.Atoi(splitTime[0])
-		if err != nil {
+		if hours, err = strconv.Atoi(splitTime[0]); err != nil {
 			return nil, ErrTime
 		}
 
-		minutes, err = strconv.Atoi(splitTime[1])
-		if err != nil {
+		if minutes, err = strconv.Atoi(splitTime[1]); err != nil {
 			return nil, ErrTime
 		}
 
-		seconds, err = strconv.ParseFloat(splitTime[2], 64)
-		if err != nil {
+		if seconds, err = strconv.ParseFloat(splitTime[2], 64); err != nil {
 			return nil, ErrTime
 		}
 
@@ -167,8 +160,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the bitrate
 	if bitrateIndex != 0 && bitrateIndex < len(fields) {
-		bitrate, err = strconv.ParseFloat(strings.TrimRight(fields[bitrateIndex], "kbit/s"), 64)
-		if err != nil {
+		if bitrate, err = strconv.ParseFloat(strings.TrimRight(fields[bitrateIndex], "kbit/s"), 64); err != nil {
 			return nil, ErrBitrate
 		}
 	} else {
@@ -177,8 +169,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the speed
 	if speedIndex != 0 && speedIndex < len(fields) {
-		speed, err = strconv.ParseFloat(strings.TrimRight(fields[speedIndex], "x"), 64)
-		if err != nil {
+		if speed, err = strconv.ParseFloat(strings.TrimRight(fields[speedIndex], "x"), 64); err != nil {
 			return nil, ErrSpeed
 		}
 	} else {
