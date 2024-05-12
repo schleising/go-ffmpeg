@@ -164,6 +164,9 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 }
 
 func (f *Ffmpeg) cleanUp() {
+	// Send an empty progress struct to the channel
+	f.Progress <- Progress{}
+
 	// Close the progress channel
 	close(f.Progress)
 
