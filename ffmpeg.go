@@ -165,23 +165,34 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 
 func (f *Ffmpeg) cleanUp() {
 	// Send an empty progress struct to the channel
-	f.Progress <- Progress{}
+	select {
+	case f.Progress <- Progress{}:
+	default:
+	}
 
 	// Close the progress channel
 	close(f.Progress)
 
-	// If the context was cancelled, delete the output file
+	// If the context was cancelled, delete the output file and send true or false to the done channel
 	select {
 	case <-f.context.Done():
 		os.Remove(f.outputFile)
+
+		// Signal that the ffmpeg command is done
+		select {
+		case f.Done <- false:
+		default:
+		}
 	default:
+		// Signal that the ffmpeg command is done
+		select {
+		case f.Done <- true:
+		default:
+		}
 	}
 
 	// Close the error channel
 	close(f.Error)
-
-	// Signal that the ffmpeg command is done
-	f.Done <- false
 
 	// Close the done channel
 	close(f.Done)
@@ -220,7 +231,10 @@ func (f *Ffmpeg) Start() error {
 				// Do not send an error if the progress information is not available
 				if !errors.Is(err, ErrNoProgressInformation) {
 					// Send an error to the error channel
-					f.Error <- err
+					select {
+					case f.Error <- err:
+					default:
+					}
 
 					// Cancel the ffmpeg command
 					f.command.Cancel()
