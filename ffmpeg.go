@@ -99,7 +99,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	// Create a channel to send done signal
 	doneChannel := make(chan bool)
 
-	// Get the input fiel details with ffprobe
+	// Get the input file details with ffprobe
 	ffprobe := exec.Command(
 		"ffprobe",
 		"-print_format",
