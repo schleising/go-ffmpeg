@@ -236,8 +236,11 @@ func (f *Ffmpeg) Start() error {
 				}
 			}
 
-			// Send the progress to the channel
-			f.Progress <- *progress
+			// Try to send the progress to the channel, if there is no listener continue to the next iteration
+			select {
+			case f.Progress <- *progress:
+			default:
+			}
 		}
 	}()
 
