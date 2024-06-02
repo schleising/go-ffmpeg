@@ -164,15 +164,6 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 }
 
 func (f *Ffmpeg) cleanUp() {
-	// Send an empty progress struct to the channel
-	select {
-	case f.Progress <- Progress{}:
-	default:
-	}
-
-	// Close the progress channel
-	close(f.Progress)
-
 	// If the context was cancelled, delete the output file and send true or false to the done channel
 	select {
 	case <-f.context.Done():
@@ -187,9 +178,17 @@ func (f *Ffmpeg) cleanUp() {
 		// Signal that the ffmpeg command is done
 		select {
 		case f.Done <- true:
+			// Send an empty progress struct to the channel
+			select {
+			case f.Progress <- Progress{}:
+			default:
+			}
 		default:
 		}
 	}
+
+	// Close the progress channel
+	close(f.Progress)
 
 	// Close the error channel
 	close(f.Error)
