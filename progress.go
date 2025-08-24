@@ -134,34 +134,45 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the time
 	if timeIndex != 0 && timeIndex < len(fields) {
-		splitTime := strings.Split(fields[timeIndex], ":")
+		// Set the time to 0 if it is N/A
+		if fields[timeIndex] == "N/A" {
+			timeThroughFile = time.Duration(0)
+		} else {
+			// Split the time into hours, minutes, and seconds
+			splitTime := strings.Split(fields[timeIndex], ":")
 
-		if len(splitTime) != 3 {
-			return nil, ErrTime
-		}
-		// Get the hours, minutes, and seconds
-		if hours, err = strconv.Atoi(splitTime[0]); err != nil {
-			return nil, ErrTime
-		}
+			if len(splitTime) != 3 {
+				return nil, ErrTime
+			}
+			// Get the hours, minutes, and seconds
+			if hours, err = strconv.Atoi(splitTime[0]); err != nil {
+				return nil, ErrTime
+			}
 
-		if minutes, err = strconv.Atoi(splitTime[1]); err != nil {
-			return nil, ErrTime
-		}
+			if minutes, err = strconv.Atoi(splitTime[1]); err != nil {
+				return nil, ErrTime
+			}
 
-		if seconds, err = strconv.ParseFloat(splitTime[2], 64); err != nil {
-			return nil, ErrTime
-		}
+			if seconds, err = strconv.ParseFloat(splitTime[2], 64); err != nil {
+				return nil, ErrTime
+			}
 
-		// Calculate the time through the file
-		timeThroughFile = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+			// Calculate the time through the file
+			timeThroughFile = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+		}
 	} else {
 		return nil, ErrTime
 	}
 
 	// Parse the bitrate
 	if bitrateIndex != 0 && bitrateIndex < len(fields) {
-		if bitrate, err = strconv.ParseFloat(strings.TrimRight(fields[bitrateIndex], "kbit/s"), 64); err != nil {
-			return nil, ErrBitrate
+		// Handle the case where the bitrate is N/A
+		if fields[bitrateIndex] == "N/A" {
+			bitrate = 0
+		} else {
+			if bitrate, err = strconv.ParseFloat(strings.TrimRight(fields[bitrateIndex], "kbit/s"), 64); err != nil {
+				return nil, ErrBitrate
+			}
 		}
 	} else {
 		return nil, ErrBitrate
@@ -169,8 +180,13 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 
 	// Parse the speed
 	if speedIndex != 0 && speedIndex < len(fields) {
-		if speed, err = strconv.ParseFloat(strings.TrimRight(fields[speedIndex], "x"), 64); err != nil {
-			return nil, ErrSpeed
+		// Handle the case where the speed is N/A
+		if fields[speedIndex] == "N/A" {
+			speed = 0
+		} else {
+			if speed, err = strconv.ParseFloat(strings.TrimRight(fields[speedIndex], "x"), 64); err != nil {
+				return nil, ErrSpeed
+			}
 		}
 	} else {
 		return nil, ErrSpeed
