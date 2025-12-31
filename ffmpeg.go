@@ -62,6 +62,9 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	// Set the output file to the Converted subdirectory of the directory the input file is in with the same name as the input file
 	outputFile := filepath.Join(filepath.Dir(inputFile), "Converted", filepath.Base(inputFile))
 
+	// Change the output file extension to .mp4
+	outputFile = strings.TrimSuffix(outputFile, filepath.Ext(outputFile)) + ".mp4"
+
 	// If the output file already exists, return an error
 	_, err = os.Stat(outputFile)
 	if !os.IsNotExist(err) {
