@@ -52,18 +52,21 @@ type ffProbeOutput struct {
 	Format format `json:"format"`
 }
 
-func NewFfmpeg(cancelContext context.Context, inputFile string, command []string) (*Ffmpeg, error) {
+func defaultOutputFile(inputFile string) string {
+	outputFile := filepath.Join(filepath.Dir(inputFile), "Converted", filepath.Base(inputFile))
+	return strings.TrimSuffix(outputFile, filepath.Ext(outputFile)) + ".mp4"
+}
+
+func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, command []string) (*Ffmpeg, error) {
 	// Check if the input file exists
 	_, err := os.Stat(inputFile)
 	if os.IsNotExist(err) {
 		return nil, err
 	}
 
-	// Set the output file to the Converted subdirectory of the directory the input file is in with the same name as the input file
-	outputFile := filepath.Join(filepath.Dir(inputFile), "Converted", filepath.Base(inputFile))
-
-	// Change the output file extension to .mp4
-	outputFile = strings.TrimSuffix(outputFile, filepath.Ext(outputFile)) + ".mp4"
+	if outputFile == "" {
+		outputFile = defaultOutputFile(inputFile)
+	}
 
 	// If the output file already exists, return an error
 	_, err = os.Stat(outputFile)
@@ -132,6 +135,12 @@ func NewFfmpeg(cancelContext context.Context, inputFile string, command []string
 	outputString := ""
 	for ffprobeOutputScanner.Scan() {
 		outputString += strings.TrimSpace(ffprobeOutputScanner.Text())
+	}
+	if err = ffprobeOutputScanner.Err(); err != nil {
+		return nil, ErrFfProbeRead
+	}
+	if err = ffprobe.Wait(); err != nil {
+		return nil, ErrFfProbeRead
 	}
 
 	// Unmarshal the output
