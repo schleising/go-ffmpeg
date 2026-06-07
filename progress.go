@@ -158,7 +158,7 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 			}
 
 			// Calculate the time through the file
-			timeThroughFile = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+			timeThroughFile = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds*float64(time.Second))
 		}
 	} else {
 		return nil, ErrTime
@@ -193,12 +193,15 @@ func newProgress(line string, duration time.Duration, startTime time.Time, input
 	}
 
 	// Calculate the percent complete
-	percentComplete := float64(timeThroughFile) / float64(duration) * 100
+	var percentComplete float64
+	if duration > 0 {
+		percentComplete = float64(timeThroughFile) / float64(duration) * 100
+	}
 
 	// Calculate the time taken
 	timeTaken := time.Since(startTime)
 
-	// Prevent division by zero
+	// Prevent division by zero when estimating time remaining
 	if percentComplete == 0 {
 		percentComplete = 0.01
 	}

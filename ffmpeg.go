@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,8 +40,10 @@ type Ffmpeg struct {
 	// Done channel
 	Done chan bool
 
-	// Cancel Context
-	context context.Context
+	// Context used to cancel the ffmpeg command
+	ctx context.Context
+
+	cleanupOnce sync.Once
 }
 
 type format struct {
@@ -59,8 +63,7 @@ func defaultOutputFile(inputFile string) string {
 
 func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, command []string) (*Ffmpeg, error) {
 	// Check if the input file exists
-	_, err := os.Stat(inputFile)
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(inputFile); err != nil {
 		return nil, err
 	}
 
@@ -69,20 +72,20 @@ func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, comm
 	}
 
 	// If the output file already exists, return an error
-	_, err = os.Stat(outputFile)
-	if !os.IsNotExist(err) {
+	if _, err := os.Stat(outputFile); err == nil {
 		return nil, ErrOutputFileExists
+	} else if !os.IsNotExist(err) {
+		return nil, err
 	}
 
 	// Create the output directory if it does not exist
 	outputDirectory := filepath.Dir(outputFile)
-	if err = os.MkdirAll(outputDirectory, os.ModePerm); err != nil {
+	if err := os.MkdirAll(outputDirectory, os.ModePerm); err != nil {
 		return nil, err
 	}
 
 	// Build the command line options
 	options := []string{
-		"-y",
 		"-i",
 		inputFile,
 	}
@@ -119,8 +122,6 @@ func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, comm
 	if err != nil {
 		return nil, ErrFfProbeStdOutPipe
 	}
-
-	// Defer closing the output pipe
 	defer ffprobeOutput.Close()
 
 	// Start the ffprobe command
@@ -132,10 +133,11 @@ func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, comm
 	ffprobeOutputScanner := bufio.NewScanner(ffprobeOutput)
 
 	// Read the output
-	outputString := ""
+	var outputBuilder strings.Builder
 	for ffprobeOutputScanner.Scan() {
-		outputString += strings.TrimSpace(ffprobeOutputScanner.Text())
+		outputBuilder.WriteString(strings.TrimSpace(ffprobeOutputScanner.Text()))
 	}
+	outputString := outputBuilder.String()
 	if err = ffprobeOutputScanner.Err(); err != nil {
 		return nil, ErrFfProbeRead
 	}
@@ -168,7 +170,7 @@ func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, comm
 		Progress:   progressChannel,
 		Error:      errorChannel,
 		Done:       doneChannel,
-		context:    cancelContext,
+		ctx:        cancelContext,
 	}
 
 	// Return the ffmpeg struct
@@ -176,103 +178,96 @@ func NewFfmpeg(cancelContext context.Context, inputFile, outputFile string, comm
 }
 
 func (f *Ffmpeg) cleanUp() {
-	// If the context was cancelled, delete the output file and send true or false to the done channel
-	select {
-	case <-f.context.Done():
-		os.Remove(f.outputFile)
+	f.cleanupOnce.Do(func() {
+		// If the context was cancelled, delete the output file and send false to the done channel
+		select {
+		case <-f.ctx.Done():
+			os.Remove(f.outputFile)
 
-		// Signal that the ffmpeg command is done
-		select {
-		case f.Done <- false:
-		default:
-		}
-	default:
-		// Signal that the ffmpeg command is done
-		select {
-		case f.Done <- true:
-			// Send an empty progress struct to the channel
 			select {
-			case f.Progress <- Progress{}:
+			case f.Done <- false:
 			default:
 			}
 		default:
+			select {
+			case f.Done <- true:
+				select {
+				case f.Progress <- Progress{}:
+				default:
+				}
+			default:
+			}
 		}
-	}
 
-	// Close the progress channel
-	close(f.Progress)
-
-	// Close the error channel
-	close(f.Error)
-
-	// Close the done channel
-	close(f.Done)
+		close(f.Progress)
+		close(f.Error)
+		close(f.Done)
+	})
 }
 
+func (f *Ffmpeg) monitorProgress(stderr io.ReadCloser) {
+	defer stderr.Close()
+
+	stdErrScanner := bufio.NewReader(stderr)
+
+	for {
+		line, err := stdErrScanner.ReadString('\r')
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				select {
+				case f.Error <- err:
+				default:
+				}
+			}
+			return
+		}
+
+		progress, err := newProgress(line, f.duration, f.startTime, f.inputFile, f.outputFile)
+		if err != nil {
+			if errors.Is(err, ErrNoProgressInformation) {
+				continue
+			}
+
+			select {
+			case f.Error <- err:
+			default:
+			}
+
+			f.command.Cancel()
+			return
+		}
+
+		select {
+		case f.Progress <- *progress:
+		default:
+		}
+	}
+}
+
+// Start launches the ffmpeg process and begins monitoring progress.
+// Call Wait to block until the process exits and channels are closed.
 func (f *Ffmpeg) Start() error {
-	// Create a reader to read the output from stderr
 	stderr, err := f.command.StderrPipe()
 	if err != nil {
 		return ErrStdErrPipe
 	}
 
-	// Defer closing the stderr pipe
-	defer stderr.Close()
+	go f.monitorProgress(stderr)
 
-	// Create a reader to read the output
-	stdErrScanner := bufio.NewReader(stderr)
+	return f.command.Start()
+}
 
-	// Start a goroutine to read the output
-	go func() {
-		// Read the output
-		for {
-			// Read the line
-			line, err := stdErrScanner.ReadString('\r')
-			if err != nil {
-				// Cancel the ffmpeg command
-				f.cleanUp()
+// Wait blocks until the ffmpeg process exits and performs cleanup.
+func (f *Ffmpeg) Wait() error {
+	err := f.command.Wait()
+	f.cleanUp()
+	return err
+}
 
-				// Return
-				return
-			}
-
-			// Log the output
-			progress, err := newProgress(line, f.duration, f.startTime, f.inputFile, f.outputFile)
-			if err != nil {
-				// Do not send an error if the progress information is not available
-				if !errors.Is(err, ErrNoProgressInformation) {
-					// Send an error to the error channel
-					select {
-					case f.Error <- err:
-					default:
-					}
-
-					// Cancel the ffmpeg command
-					f.command.Cancel()
-
-					// Clean up
-					f.cleanUp()
-
-					// Return
-					return
-				} else {
-					// Continue to the next iteration
-					continue
-				}
-			}
-
-			// Try to send the progress to the channel, if there is no listener continue to the next iteration
-			select {
-			case f.Progress <- *progress:
-			default:
-			}
-		}
-	}()
-
-	// Run the command
-	if err = f.command.Run(); err != nil {
+// Run starts ffmpeg and blocks until it completes.
+func (f *Ffmpeg) Run() error {
+	if err := f.Start(); err != nil {
 		return err
 	}
-
-	return nil
+	return f.Wait()
 }
